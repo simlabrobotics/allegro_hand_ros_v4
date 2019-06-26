@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<package>
+  <name>allegro_hand_driver</name>
+  <version>2.0.1</version>
+  <description>
+    ROS stack for SimLab's Allegro Hand.
+  </description>
+
+  <maintainer email="seanyi@wonikrobotics.com">Sean Yi</maintainer>
+
+  <license>BSD</license>
+  <url>http://ros.org/wiki/AllegroHandStack</url>
+
+  <!-- The *_depend tags are used to specify dependencies -->
+  <!-- Dependencies can be catkin packages or system dependencies -->
+  <!-- Examples: -->
+  <!-- Use build_depend for packages you need at compile time: -->
+  <!--   <build_depend>message_generation</build_depend> -->
+  <!-- Use test_depend for packages you need only for testing: -->
+  <!--   <test_depend>gtest</test_depend> -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>libpcan</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>libpcan</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

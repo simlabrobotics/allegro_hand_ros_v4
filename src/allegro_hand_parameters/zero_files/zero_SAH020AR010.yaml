@@ -1,0 +1,67 @@
+#SAH020AR010
+#The YAML file used by the Allegro Hand Node is named "zero.yaml"
+
+hand_info:
+ control_period_s: 0.003
+ DOF: 16
+ which_hand: 'right'
+ robot_name: 'Allegro Hand'
+ manufacturer: 'SimLab Co. Ltd.'
+ origin: 'Seoul, South Korea'
+ serial: 'SAH020AR010'
+ version: 2.0
+
+zero:
+ encoder_offset:
+  j00: 690
+  j01: -66999
+  j02: -207
+  j03: -870
+  j10: 14
+  j11: -65734
+  j12: 931
+  j13: 1636
+  j20: 63
+  j21: -66921
+  j22: 874
+  j23: 1380
+  j30: -16573
+  j31: 198
+  j32: -65668
+  j33: -66609
+
+ encoder_direction:
+  j00: +1
+  j01: -1
+  j02: +1
+  j03: +1
+  j10: +1
+  j11: -1
+  j12: +1
+  j13: +1
+  j20: +1
+  j21: -1
+  j22: +1
+  j23: +1
+  j30: +1
+  j31: +1
+  j32: -1
+  j33: -1
+
+ motor_direction:
+  j00: -1
+  j01: -1
+  j02: -1
+  j03: -1
+  j10: -1
+  j11: +1
+  j12: +1
+  j13: -1
+  j20: +1
+  j21: -1
+  j22: -1
+  j23: -1
+  j30: -1
+  j31: -1
+  j32: -1
+  j33: -1

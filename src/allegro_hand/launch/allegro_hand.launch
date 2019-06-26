@@ -1,0 +1,143 @@
+<launch>
+  <!--
+       Required arguments:
+          HAND:=right|left
+       Suggested arguments:
+          NUM:=0|1|...
+          ZEROS:=/path/to/zeros_file.yaml
+          CONTROLLER:=grasp|pd|velsat|torque|sim
+          RESPAWN:=true|false   Respawn controller if it dies.
+          KEYBOARD:=true|false  (default is true)
+          AUTO_CAN:=true|false  (if true, ignores CAN_DEVICE argument and finds the can device automagically).
+          CAN_DEVICE:=/dev/pcanusb1 | /dev/pcanusbNNN  (ls -l /dev/pcan* to see open CAN devices)
+          VISUALIZE:=true|false  (Launch rviz)
+          JSP_GUI:=true|false  (If true, start a joint_state_publisher for commanded joint angles).
+          GAZEBO:=true|false  (NOTE: Gazebo support is highly experimental at this point)
+
+       This script launches the following nodes:
+         - allegro hand controller (different controllers exist)
+         - keyboard controller
+         - state publisher (for TF information)
+
+       NOTE: If you specify the can device manually (CAN_DEVICE:=/dev/pcanusbN),
+             make sure you *also* specify AUTO_CAN:=false.
+
+  -->
+
+
+  <!-- The inclusion of which_hand in the zero.yaml file has been deprecated.
+       Which hand (left/right) must now be specified as an argument when launching the Allegro Hand
+       as an input for both the robot_description and for the grasping library controllers. -->
+  <arg name="HAND"/>
+  <arg name="NUM" default="0"/>
+  <arg name="GAZEBO" default="false"/>
+
+  <!-- Use the joint_state_publisher for *commanded* joint angles. -->
+  <arg name="JSP_GUI" default="false"/>
+
+  <!-- Visualization with rviz, only if arg VISUALIZE is set to true. Default is
+       false, the allegro_viz.launch can be started separated. -->
+  <arg name ="VISUALIZE" default="true" />
+  <include file="$(find allegro_hand_controllers)/launch/allegro_viz.launch"
+           if="$(arg VISUALIZE)">
+    <arg name="NUM" value="$(arg NUM)"/>
+  </include>
+
+  <arg name="CONTROLLER" default="grasp"/> <!-- grasp, pd, velsat  -->
+  <!-- Controllers include:
+       -grasp *
+       -pd
+       -velsat
+       -torque
+       *The default controller is 'grasp' which employs the included grasping library (libBHand). -->
+
+  <arg name="POLLING" default="true"/> <!-- true, false for polling the CAN communication -->
+
+  <!-- ls -l /dev/pcan* to see your open CAN ports. Auto means find it
+       automatically, and ignores the CAN_DEVICE argument. -->
+  <arg name="AUTO_CAN" default="true" />
+  <arg name="CAN_DEVICE" default="/dev/pcanusb1" />
+
+  <arg name="PARAMS_DIR" default="$(find allegro_hand_parameters)" />
+  <arg name="KEYBOARD" default="true" />
+
+  <!-- yaml param files for your hand can be found in parameters/zero_files/ -->
+  <arg name="ZEROS" default="$(arg PARAMS_DIR)/zero.yaml"/>
+
+  <!--If true, respawn the controller if it dies. -->
+  <arg name="RESPAWN" default="false"/>
+
+  <!-- Load the robot description directly from the xacro file. (NOTE: store it
+       in two parameter names.) -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro.py
+                  $(find allegro_hand_description)/allegro_hand_description_$(arg HAND).xacro"/>
+
+  <!-- Allegro Hand controller and communication node. -->
+  <node name="allegroHand_$(arg HAND)_$(arg NUM)"
+        pkg="allegro_hand_controllers"
+        type="allegro_node_$(arg CONTROLLER)"
+        output="screen"
+        clear_params="true"
+        respawn="$(arg RESPAWN)"
+        respawn_delay="2"
+        args="$(arg POLLING)" >
+
+    <!-- Remapping of topics into enumerated allegroHand_# namespace -->
+    <remap from="allegroHand/joint_states" to="allegroHand_$(arg NUM)/joint_states"/>
+    <remap from="allegroHand/joint_cmd" to="allegroHand_$(arg NUM)/joint_cmd"/>
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+    <remap from="allegroHand/torque_cmd" to="allegroHand_$(arg NUM)/torque_cmd"/>
+    <remap from="allegroHand/envelop_torque" to="allegroHand_$(arg NUM)/envelop_torque"/>
+    <remap from="allegroHand/joint_current_states" to="allegroHand_$(arg NUM)/joint_current_states"/>
+    <remap from="allegroHand/joint_desired_states" to="allegroHand_$(arg NUM)/joint_desired_states"/>
+
+    <!--parameters are within the scope of the hand node so that multiple hands can be run at the same time -->
+    <rosparam file="$(arg ZEROS)" command="load" />
+
+    <rosparam file="$(arg PARAMS_DIR)/gains_pd.yaml" command="load" />
+    <rosparam file="$(arg PARAMS_DIR)/gains_velSat.yaml" command="load" />
+    <rosparam file="$(arg PARAMS_DIR)/initial_position.yaml" command="load" />
+
+    <!-- Set the CAN channel automatically (using detect_pcan.py) if the
+         AUTO_CAN parameter is true, otherwise use the CAN_DEVICE
+         argument. NOTE: To manually set the can device, you must *also* set
+         AUTO_CAN:=false. -->
+    <param name="/comm/CAN_CH" value="$(arg CAN_DEVICE)"
+           unless="$(arg AUTO_CAN)" />
+    <param name="/comm/CAN_CH"
+           command="$(find allegro_hand_description)/scripts/detect_pcan.py"
+           if="$(arg AUTO_CAN)" />
+
+    <param name="/hand_info/which_hand" value="$(arg HAND)" /> <!-- See HAND arg above -->
+  </node>
+
+  <!-- NOTE: The joint_state_publisher is actually commanding *desired* joint
+       angles. You can use the 'sim' controller to have a non-existent hand. -->
+  <node name="joint_states_$(arg NUM)" pkg="joint_state_publisher" type="joint_state_publisher"
+        if="$(arg JSP_GUI)">
+    <remap from="joint_states" to="allegroHand_$(arg NUM)/joint_cmd"/>
+    <param name="use_gui" value="true"/>
+  </node>
+
+  <!-- Joint States (angles) to Joint Transforms -->
+  <node name="jointState2tf_$(arg NUM)"
+        pkg="robot_state_publisher"
+        type="state_publisher">
+    <remap from="tf" to="allegroHand_$(arg NUM)/tf"/>
+    <remap from="joint_states" to="allegroHand_$(arg NUM)/joint_states"/>
+  </node>
+
+  <!-- Keyboard handler (if arg KEYBOARD is true) -->
+  <node name="keyboard_$(arg NUM)"
+        pkg="allegro_hand_keyboard"
+        type="allegro_hand_keyboard_node"
+        output="screen"
+        if="$(arg KEYBOARD)">
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+  </node>
+
+
+
+
+</launch>
